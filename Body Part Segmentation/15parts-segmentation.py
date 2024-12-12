@@ -145,7 +145,7 @@ if __name__ == '__main__':
             print(f"Segmenting {filename}...", flush=True, end=' ')
             seg, mask_img = process(INPUT_FOLDER + '/' + filename, params, model_params)
 
-            depth_img = cv2.imread('Depth Estimation/output/' + filename.split('.')[0] + '_depth.png', cv2.IMREAD_GRAYSCALE)
+            depth_img = cv2.imread('../Depth Estimation/output/' + filename.split('.')[0] + '_depth.png', cv2.IMREAD_GRAYSCALE)
 
             # Find the depth of pixels of a person's body and then find the average value of them
             mask_img_gray = cv2.cvtColor(mask_img, cv2.COLOR_BGR2GRAY)
