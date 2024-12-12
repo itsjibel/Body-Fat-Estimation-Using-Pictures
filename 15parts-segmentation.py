@@ -14,23 +14,6 @@ INPUT_FOLDER = './input'
 OUTPUT_FOLDER = './output'
 SCALE = [1.0]
 
-# 1: Background, 2: Head, 3: Torso, 4: Right arm, 5: Left arm, 6: Right forearm,
-# 7: Left forearm, 8: Right hand, 9: Left hand, 10: Right thigh, 11: Left thigh
-# 12: Right shank, 13: Left shank, 14: Right feet, 15: Left feet
-torso_confidence_rate = 0.65
-right_arm_confidence_rate = 0.6
-left_arm_confidence_rate = 0.6
-right_forearm_confidence_rate = 0.6
-left_forearm_confidence_rate = 0.6
-right_thigh_confidence_rate = 0.55
-left_thigh_confidence_rate = 0.55
-right_shank_confidence_rate = 0.55
-left_shank_confidence_rate = 0.55
-
-
-classes_confidence_rate = [0, 0, torso_confidence_rate, right_arm_confidence_rate, left_arm_confidence_rate,
-                           right_forearm_confidence_rate, left_forearm_confidence_rate, 0, 0,
-                           right_thigh_confidence_rate, left_thigh_confidence_rate, right_shank_confidence_rate, left_shank_confidence_rate, 0, 0]
 human_part = [0, 1, 2, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13]
 human_ori_part = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 seg_num = 15
@@ -159,51 +142,55 @@ if __name__ == '__main__':
     # generate image with body parts
     for filename in os.listdir(INPUT_FOLDER):
         if filename.endswith('.png') or filename.endswith('.jpg'):
-            print('Segmenting', filename + '...', end=' ', flush=True)
+            print(f"Segmenting {filename}...", flush=True, end=' ')
             seg, mask_img = process(INPUT_FOLDER + '/' + filename, params, model_params)
-            if type(seg) == str:
-                print(seg)
-                continue
-            else:
-                print('Done!')
 
             depth_img = cv2.imread('Depth Estimation/output/' + filename.split('.')[0] + '_depth.png', cv2.IMREAD_GRAYSCALE)
-            
+
             # Find the depth of pixels of a person's body and then find the average value of them
             mask_img_gray = cv2.cvtColor(mask_img, cv2.COLOR_BGR2GRAY)
             depth_img = cv2.bitwise_and(depth_img, mask_img_gray)
 
-            sum = 0
+            seg_argmax = np.argmax(seg, axis=-1)
+
+            body_pixels_depth_sum = 0
             image_pixels = depth_img.shape[0] * depth_img.shape[1]
 
             for x in range(depth_img.shape[0]):
                 for y in range(depth_img.shape[1]):
                     if depth_img[x][y] == 0:
                         image_pixels -= 1
-                    sum += depth_img[x][y]
+                    body_pixels_depth_sum += depth_img[x][y]
 
-            avg = sum / image_pixels
+            body_pixels_depth_avg = body_pixels_depth_sum / image_pixels
 
-            # Normalize the depth values with average depth values of the person's body to get a better prediction on segmentation
-            depth_img = depth_img / avg
+            class_numbers = [1, 2]
+            for class_number in class_numbers:
+                sum = 0
+                count = 0
+                for x in range(seg_argmax.shape[1]):
+                    for y in range(seg_argmax.shape[0]):
+                        class_predicted = seg_argmax[y][x]
+                        depth_of_pixel = depth_img[y][x]
+                        
+                        if class_predicted == class_number and abs(body_pixels_depth_avg - depth_of_pixel) < 25:
+                            sum += depth_of_pixel
+                            count += 1
 
-            seg_argmax = np.argmax(seg, axis=-1)
+                if count != 0:
+                    avg = sum / count
+                    for x in range(seg_argmax.shape[1]):
+                        for y in range(seg_argmax.shape[0]):
+                            depth_of_pixel = depth_img[y][x]
+                            if abs(depth_of_pixel - avg) < 10 and seg_argmax[y][x] == 0 and (seg_argmax[y][x - 1] == class_number or seg_argmax[y][x + 1] == class_number or seg_argmax[y - 1][x] == class_number or seg_argmax[y + 1][x] == class_number):
+                                seg_argmax[y][x] = class_number
 
-            # Check the confidence rate of the prediction
-            for x in range(seg_argmax.shape[1]):
-                for y in range(seg_argmax.shape[0]):
-                    class_predicted = seg_argmax[y][x]
-                    depth_of_pixel = depth_img[y][x]
-
-                    # Multiply the depth normalized value of this pixel by the prediction confidence,
-                    # if the depth normalized value is < 0, then the confidence rate decreases and increases otherwise.
-                    confidence_rate = seg[y][x][class_predicted] * depth_of_pixel
-                    if confidence_rate < classes_confidence_rate[class_predicted]:
-                        seg_argmax[y][x] = 0
+                            if abs(depth_of_pixel - avg) > 35 and seg_argmax[y][x] == class_number:
+                                seg_argmax[y][x] = 0
 
             seg_canvas = human_seg_combine_argmax(seg_argmax)
             cur_canvas = cv2.imread(INPUT_FOLDER + '/' + filename)
-            canvas = cv2.addWeighted(seg_canvas, 0.35, cur_canvas, 1, 0)
+            canvas = cv2.addWeighted(seg_canvas, 1, cur_canvas, 1, 0.5)
             file_output_location = '%s/%s'%(OUTPUT_FOLDER, 'seg_' + filename)
 
             # Draw body joints
@@ -212,7 +199,7 @@ if __name__ == '__main__':
             pose = mp_pose.Pose(min_detection_confidence=0.7, min_tracking_confidence=0.7)
 
             # convert the frame to RGB format
-            RGB = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
+            RGB = cv2.cvtColor(cur_canvas, cv2.COLOR_BGR2RGB)
 
             # process the RGB frame to get the result
             results = pose.process(RGB)
@@ -221,3 +208,4 @@ if __name__ == '__main__':
             mp_drawing.draw_landmarks(canvas, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
             cv2.imwrite(file_output_location, canvas)
+            print("Done")

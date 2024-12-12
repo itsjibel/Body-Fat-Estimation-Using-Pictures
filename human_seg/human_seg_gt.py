@@ -4,9 +4,9 @@ import numpy as np
 # 7: Left forearm, 8: Right hand, 9: Left hand, 10: Right thigh, 11: Left thigh
 # 12: Right shank, 13: Left shank, 14: Right feet, 15: Left feet
 
-r_chan = [0, 0, 255, 255, 255, 127, 255, 0, 0,   0,   0,   0, 127, 0, 0]
-g_chan = [0, 0,   0, 127, 255,   0,   0, 0, 0,   0, 255, 127, 255, 0, 0]
-b_chan = [0, 0,   0,   0,   0, 255, 255, 0, 0, 255,   0, 255, 127, 0, 0]
+r_chan = [0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+g_chan = [0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+b_chan = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 def human_seg_combine_channel(human_seg_split_map):
     r_chan_seg = np.add.reduce(human_seg_split_map * np.array(r_chan), 2)
