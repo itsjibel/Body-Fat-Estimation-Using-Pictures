@@ -1,0 +1,9 @@
+__pycache__
+weights
+yolov8x-seg.pt
+input
+output
+torchhub
+Parametric Body Fat Estimation/models
+Parametric Body Fat Estimation/scalers
+test.ipynb
