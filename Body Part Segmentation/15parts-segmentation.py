@@ -122,6 +122,53 @@ def process(input_image, params, model_params):
 
     return seg_avg, mask_img
 
+def integration_depth_and_segmentation(depth_img, seg_argmax):
+    body_pixels_depth_sum = 0
+    num_of_image_pixels = depth_img.shape[0] * depth_img.shape[1]
+
+    for x in range(depth_img.shape[0]):
+        for y in range(depth_img.shape[1]):
+            # If depth_img[x][y] is 0, the YOLO model predicted that this pixel is not part of a human.
+            if depth_img[x][y] == 0:
+                num_of_image_pixels -= 1
+
+            body_pixels_depth_sum += depth_img[x][y]
+
+    # Calculate the average depth of pixels of the person's body in the picture
+    body_pixels_depth_avg = body_pixels_depth_sum / num_of_image_pixels
+
+    # Class 1: Head, Class 2: torso
+    class_numbers = [1, 2]
+    for class_number in class_numbers:
+        sum = 0
+        count = 0
+
+        # For each class, we iterate through the picture pixels for accurate segmentation
+        for x in range(seg_argmax.shape[1]):
+            for y in range(seg_argmax.shape[0]):
+                class_predicted = seg_argmax[y][x]
+                depth_of_pixel = depth_img[y][x]
+                
+                # We calculate the average depth of the pixels predicted as "class I" (I is class number) and their depth is slightly different from the body's average depth
+                if class_predicted == class_number and abs(body_pixels_depth_avg - depth_of_pixel) < 25:
+                    sum += depth_of_pixel
+                    count += 1
+
+        if count != 0:
+            avg = sum / count
+            for x in range(seg_argmax.shape[1]):
+                for y in range(seg_argmax.shape[0]):
+                    depth_of_pixel = depth_img[y][x]
+
+                    # If this pixel didn't segment to anything and has a low depth difference with an average depth of "class I" and also is a neighbor with one of the pixels which segmented as "class I", then we segment it as "class I".
+                    if abs(depth_of_pixel - avg) < 10 and seg_argmax[y][x] == 0 and (seg_argmax[y][x - 1] == class_number or seg_argmax[y][x + 1] == class_number or seg_argmax[y - 1][x] == class_number or seg_argmax[y + 1][x] == class_number):
+                        seg_argmax[y][x] = class_number
+
+                    # If this pixel is segmented as "class I" and the depth of it has a big difference from the average depth of "class I", so we segment it as "background".
+                    if abs(depth_of_pixel - avg) > 35 and seg_argmax[y][x] == class_number:
+                        seg_argmax[y][x] = 0
+
+    return seg_argmax
 
 if __name__ == '__main__':
     keras_weights_file = MODEL_PATH
@@ -143,50 +190,16 @@ if __name__ == '__main__':
     for filename in os.listdir(INPUT_FOLDER):
         if filename.endswith('.png') or filename.endswith('.jpg'):
             print(f"Segmenting {filename}...", flush=True, end=' ')
-            seg, mask_img = process(INPUT_FOLDER + '/' + filename, params, model_params)
-
-            depth_img = cv2.imread('../Depth Estimation/output/' + filename.split('.')[0] + '_depth.png', cv2.IMREAD_GRAYSCALE)
-
-            # Find the depth of pixels of a person's body and then find the average value of them
-            mask_img_gray = cv2.cvtColor(mask_img, cv2.COLOR_BGR2GRAY)
-            depth_img = cv2.bitwise_and(depth_img, mask_img_gray)
-
+            seg, human_mask = process(INPUT_FOLDER + '/' + filename, params, model_params)
             seg_argmax = np.argmax(seg, axis=-1)
 
-            body_pixels_depth_sum = 0
-            image_pixels = depth_img.shape[0] * depth_img.shape[1]
+            # Load the depth image from the person's picture and apply the mask of the "human mask" (predicted from YOLO) to ignore the background pixels
+            depth_img = cv2.imread('../Depth Estimation/output/' + filename.split('.')[0] + '_depth.png', cv2.IMREAD_GRAYSCALE)
+            human_mask_gray = cv2.cvtColor(human_mask, cv2.COLOR_BGR2GRAY)
+            depth_img = cv2.bitwise_and(depth_img, human_mask_gray)
 
-            for x in range(depth_img.shape[0]):
-                for y in range(depth_img.shape[1]):
-                    if depth_img[x][y] == 0:
-                        image_pixels -= 1
-                    body_pixels_depth_sum += depth_img[x][y]
-
-            body_pixels_depth_avg = body_pixels_depth_sum / image_pixels
-
-            class_numbers = [1, 2]
-            for class_number in class_numbers:
-                sum = 0
-                count = 0
-                for x in range(seg_argmax.shape[1]):
-                    for y in range(seg_argmax.shape[0]):
-                        class_predicted = seg_argmax[y][x]
-                        depth_of_pixel = depth_img[y][x]
-                        
-                        if class_predicted == class_number and abs(body_pixels_depth_avg - depth_of_pixel) < 25:
-                            sum += depth_of_pixel
-                            count += 1
-
-                if count != 0:
-                    avg = sum / count
-                    for x in range(seg_argmax.shape[1]):
-                        for y in range(seg_argmax.shape[0]):
-                            depth_of_pixel = depth_img[y][x]
-                            if abs(depth_of_pixel - avg) < 10 and seg_argmax[y][x] == 0 and (seg_argmax[y][x - 1] == class_number or seg_argmax[y][x + 1] == class_number or seg_argmax[y - 1][x] == class_number or seg_argmax[y + 1][x] == class_number):
-                                seg_argmax[y][x] = class_number
-
-                            if abs(depth_of_pixel - avg) > 35 and seg_argmax[y][x] == class_number:
-                                seg_argmax[y][x] = 0
+            # Improve the segmentation accuracy
+            seg_argmax = integration_depth_and_segmentation(depth_img, seg_argmax)
 
             seg_canvas = human_seg_combine_argmax(seg_argmax)
             cur_canvas = cv2.imread(INPUT_FOLDER + '/' + filename)
