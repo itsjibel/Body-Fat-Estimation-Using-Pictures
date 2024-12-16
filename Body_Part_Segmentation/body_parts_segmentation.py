@@ -2,15 +2,14 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import cv2
-import mediapipe as mp
 import numpy as np
-from config_reader import config_reader
-from model_simulated_RGB101 import get_testing_model_resnet101
-from human_seg.human_seg_gt import human_seg_combine_argmax
-from human_seg.cropHuman import cropHuman
+from Body_Part_Segmentation.config_reader import config_reader
+from Body_Part_Segmentation.model_simulated_RGB101 import get_testing_model_resnet101
+from Body_Part_Segmentation.human_seg.human_seg_gt import human_seg_combine_argmax
+from Body_Part_Segmentation.human_seg.cropHuman import cropHuman
 
-MODEL_PATH = './weights/body_part_model.h5'
-INPUT_FOLDER = '../input'
+MODEL_PATH = 'Body_Part_Segmentation/weights/body_part_model.h5'
+INPUT_FOLDER = 'input'
 OUTPUT_FOLDER = './output'
 SCALE = [1.0]
 
@@ -170,6 +169,39 @@ def integration_depth_and_segmentation(depth_img, seg_argmax):
 
     return seg_argmax
 
+def get_segmentation_of_image(filename):
+    keras_weights_file = MODEL_PATH
+
+    global model
+    model = get_testing_model_resnet101() 
+    model.load_weights(keras_weights_file)
+    params, model_params = config_reader()
+
+    scale_list = []
+    for item in SCALE:
+        scale_list.append(float(item))
+
+    params['scale_search'] = scale_list
+
+    seg, human_mask = process(INPUT_FOLDER + '/' + filename, params, model_params)
+    seg_argmax = np.argmax(seg, axis=-1)
+
+    # Load the depth image from the person's picture and apply the mask of the "human mask" (predicted from YOLO) to ignore the background pixels
+    depth_img = cv2.imread('Depth_Estimation/output/' + filename.split('.')[0] + '_depth.png', cv2.IMREAD_GRAYSCALE)
+    human_mask_gray = cv2.cvtColor(human_mask, cv2.COLOR_BGR2GRAY)
+    depth_img = cv2.bitwise_and(depth_img, human_mask_gray)
+
+    # Improve the segmentation accuracy
+    seg_argmax = integration_depth_and_segmentation(depth_img, seg_argmax)
+
+    return seg_argmax
+
+def get_segmentation_of_frontal_image():
+    return get_segmentation_of_image("Front.jpg")
+
+def get_segmentation_of_left_image():
+    return get_segmentation_of_image("Left.jpg")
+
 if __name__ == '__main__':
     keras_weights_file = MODEL_PATH
 
@@ -189,35 +221,12 @@ if __name__ == '__main__':
     # generate image with body parts
     for filename in os.listdir(INPUT_FOLDER):
         print(f"Segmenting {filename}...", flush=True, end=' ')
-        seg, human_mask = process(INPUT_FOLDER + '/' + filename, params, model_params)
-        seg_argmax = np.argmax(seg, axis=-1)
-
-        # Load the depth image from the person's picture and apply the mask of the "human mask" (predicted from YOLO) to ignore the background pixels
-        depth_img = cv2.imread('../Depth Estimation/output/' + filename.split('.')[0] + '_depth.png', cv2.IMREAD_GRAYSCALE)
-        human_mask_gray = cv2.cvtColor(human_mask, cv2.COLOR_BGR2GRAY)
-        depth_img = cv2.bitwise_and(depth_img, human_mask_gray)
-
-        # Improve the segmentation accuracy
-        seg_argmax = integration_depth_and_segmentation(depth_img, seg_argmax)
+        seg_argmax = get_segmentation_of_image(filename)
 
         seg_canvas = human_seg_combine_argmax(seg_argmax)
         cur_canvas = cv2.imread(INPUT_FOLDER + '/' + filename)
         canvas = cv2.addWeighted(seg_canvas, 1, cur_canvas, 1, 0.5)
         file_output_location = '%s/%s'%(OUTPUT_FOLDER, 'seg_' + filename)
-
-        # Draw body joints
-        mp_drawing = mp.solutions.drawing_utils
-        mp_pose = mp.solutions.pose
-        pose = mp_pose.Pose(min_detection_confidence=0.7, min_tracking_confidence=0.7)
-
-        # convert the frame to RGB format
-        RGB = cv2.cvtColor(cur_canvas, cv2.COLOR_BGR2RGB)
-
-        # process the RGB frame to get the result
-        results = pose.process(RGB)
-
-        # draw detected skeleton on the frame
-        mp_drawing.draw_landmarks(canvas, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
         cv2.imwrite(file_output_location, canvas)
         print("Done")

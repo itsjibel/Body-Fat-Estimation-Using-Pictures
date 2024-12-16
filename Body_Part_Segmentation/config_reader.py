@@ -1,7 +1,7 @@
 from configobj import ConfigObj
 
 def config_reader():
-    config = ConfigObj('config')
+    config = ConfigObj('Body_Part_Segmentation/config')
 
     param = config['param']
     model_id = param['modelID']

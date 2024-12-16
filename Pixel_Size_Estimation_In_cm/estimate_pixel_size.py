@@ -5,7 +5,7 @@ import cv2
 import mediapipe as mp
 
 def calculateFrontalImagePixelSize(personHeightInCm):
-    image = cv2.imread('../input/Front.jpg')
+    image = cv2.imread('input/Front.jpg')
     image_height, image_width, _ = image.shape
     mp_pose = mp.solutions.pose
     pose = mp_pose.Pose(static_image_mode=True)
@@ -26,7 +26,7 @@ def calculateFrontalImagePixelSize(personHeightInCm):
     return pixel_size, left_shank_length_in_cm
 
 def calculateLeftImagePixelSize(personHeightInCm):
-    image = cv2.imread('../input/Left.jpg')
+    image = cv2.imread('input/Left.jpg')
     image_height, image_width, _ = image.shape
     mp_pose = mp.solutions.pose
     pose = mp_pose.Pose(static_image_mode=True)

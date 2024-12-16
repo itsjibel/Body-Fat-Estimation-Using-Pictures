@@ -1,0 +1,10 @@
+from Pixel_Size_Estimation_In_cm import estimate_pixel_size as PixelSizeEstimaion
+from Body_Part_Segmentation import body_parts_segmentation as BodyPartSegmentation
+
+HEIGHT = 190
+
+frontal_image_pixel_size = PixelSizeEstimaion.calculateFrontalImagePixelSize(HEIGHT)
+left_image_pixel_size = PixelSizeEstimaion.calculateLeftImagePixelSize(HEIGHT)
+
+frontal_image_segments = BodyPartSegmentation.get_segmentation_of_frontal_image()
+left_image_segments = BodyPartSegmentation.get_segmentation_of_left_image()

@@ -15,7 +15,7 @@ from keras.layers import Layer, InputSpec
 from keras import initializers
 from keras.layers import add
 
-import mylayers
+import Body_Part_Segmentation.mylayers as mylayers
 import keras.backend as K
 
 stages = 1
