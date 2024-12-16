@@ -10,7 +10,7 @@ from human_seg.human_seg_gt import human_seg_combine_argmax
 from human_seg.cropHuman import cropHuman
 
 MODEL_PATH = './weights/body_part_model.h5'
-INPUT_FOLDER = './input'
+INPUT_FOLDER = '../input'
 OUTPUT_FOLDER = './output'
 SCALE = [1.0]
 
@@ -188,37 +188,36 @@ if __name__ == '__main__':
 
     # generate image with body parts
     for filename in os.listdir(INPUT_FOLDER):
-        if filename.endswith('.png') or filename.endswith('.jpg'):
-            print(f"Segmenting {filename}...", flush=True, end=' ')
-            seg, human_mask = process(INPUT_FOLDER + '/' + filename, params, model_params)
-            seg_argmax = np.argmax(seg, axis=-1)
+        print(f"Segmenting {filename}...", flush=True, end=' ')
+        seg, human_mask = process(INPUT_FOLDER + '/' + filename, params, model_params)
+        seg_argmax = np.argmax(seg, axis=-1)
 
-            # Load the depth image from the person's picture and apply the mask of the "human mask" (predicted from YOLO) to ignore the background pixels
-            depth_img = cv2.imread('../Depth Estimation/output/' + filename.split('.')[0] + '_depth.png', cv2.IMREAD_GRAYSCALE)
-            human_mask_gray = cv2.cvtColor(human_mask, cv2.COLOR_BGR2GRAY)
-            depth_img = cv2.bitwise_and(depth_img, human_mask_gray)
+        # Load the depth image from the person's picture and apply the mask of the "human mask" (predicted from YOLO) to ignore the background pixels
+        depth_img = cv2.imread('../Depth Estimation/output/' + filename.split('.')[0] + '_depth.png', cv2.IMREAD_GRAYSCALE)
+        human_mask_gray = cv2.cvtColor(human_mask, cv2.COLOR_BGR2GRAY)
+        depth_img = cv2.bitwise_and(depth_img, human_mask_gray)
 
-            # Improve the segmentation accuracy
-            seg_argmax = integration_depth_and_segmentation(depth_img, seg_argmax)
+        # Improve the segmentation accuracy
+        seg_argmax = integration_depth_and_segmentation(depth_img, seg_argmax)
 
-            seg_canvas = human_seg_combine_argmax(seg_argmax)
-            cur_canvas = cv2.imread(INPUT_FOLDER + '/' + filename)
-            canvas = cv2.addWeighted(seg_canvas, 1, cur_canvas, 1, 0.5)
-            file_output_location = '%s/%s'%(OUTPUT_FOLDER, 'seg_' + filename)
+        seg_canvas = human_seg_combine_argmax(seg_argmax)
+        cur_canvas = cv2.imread(INPUT_FOLDER + '/' + filename)
+        canvas = cv2.addWeighted(seg_canvas, 1, cur_canvas, 1, 0.5)
+        file_output_location = '%s/%s'%(OUTPUT_FOLDER, 'seg_' + filename)
 
-            # Draw body joints
-            mp_drawing = mp.solutions.drawing_utils
-            mp_pose = mp.solutions.pose
-            pose = mp_pose.Pose(min_detection_confidence=0.7, min_tracking_confidence=0.7)
+        # Draw body joints
+        mp_drawing = mp.solutions.drawing_utils
+        mp_pose = mp.solutions.pose
+        pose = mp_pose.Pose(min_detection_confidence=0.7, min_tracking_confidence=0.7)
 
-            # convert the frame to RGB format
-            RGB = cv2.cvtColor(cur_canvas, cv2.COLOR_BGR2RGB)
+        # convert the frame to RGB format
+        RGB = cv2.cvtColor(cur_canvas, cv2.COLOR_BGR2RGB)
 
-            # process the RGB frame to get the result
-            results = pose.process(RGB)
+        # process the RGB frame to get the result
+        results = pose.process(RGB)
 
-            # draw detected skeleton on the frame
-            mp_drawing.draw_landmarks(canvas, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+        # draw detected skeleton on the frame
+        mp_drawing.draw_landmarks(canvas, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
-            cv2.imwrite(file_output_location, canvas)
-            print("Done")
+        cv2.imwrite(file_output_location, canvas)
+        print("Done")
