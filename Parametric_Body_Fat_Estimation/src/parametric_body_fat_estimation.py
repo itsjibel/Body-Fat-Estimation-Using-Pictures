@@ -22,11 +22,11 @@ def parametricBodyFatEstimation(sex, height, neck, abdomen):
     scaler_path = None
 
     if sex == 'male':
-        model_path = '../models/men_best_model_weights.h5'
-        scaler_path = '../scalers/men_scaler.joblib'
+        model_path = 'Parametric_Body_Fat_Estimation/models/men_best_model_weights.h5'
+        scaler_path = 'Parametric_Body_Fat_Estimation/scalers/men_scaler.joblib'
     elif sex == 'female':
-        model_path = '../models/women_best_model_weights.h5'
-        scaler_path = '../scalers/women_scaler.joblib'
+        model_path = 'Parametric_Body_Fat_Estimation/models/women_best_model_weights.h5'
+        scaler_path = 'Parametric_Body_Fat_Estimation/scalers/women_scaler.joblib'
     else:
         return "Invalid sex"
 
