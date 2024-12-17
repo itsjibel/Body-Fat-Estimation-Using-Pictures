@@ -201,32 +201,3 @@ def get_segmentation_of_frontal_image():
 
 def get_segmentation_of_left_image():
     return get_segmentation_of_image("Left.jpg")
-
-if __name__ == '__main__':
-    keras_weights_file = MODEL_PATH
-
-    print('Loding model...', end=' ', flush=True)
-    # load model
-    model = get_testing_model_resnet101() 
-    model.load_weights(keras_weights_file)
-    params, model_params = config_reader()
-
-    scale_list = []
-    for item in SCALE:
-        scale_list.append(float(item))
-
-    params['scale_search'] = scale_list
-    print('Done!')
-
-    # generate image with body parts
-    for filename in os.listdir(INPUT_FOLDER):
-        print(f"Segmenting {filename}...", flush=True, end=' ')
-        seg_argmax = get_segmentation_of_image(filename)
-
-        seg_canvas = human_seg_combine_argmax(seg_argmax)
-        cur_canvas = cv2.imread(INPUT_FOLDER + '/' + filename)
-        canvas = cv2.addWeighted(seg_canvas, 1, cur_canvas, 1, 0.5)
-        file_output_location = '%s/%s'%(OUTPUT_FOLDER, 'seg_' + filename)
-
-        cv2.imwrite(file_output_location, canvas)
-        print("Done")
