@@ -72,6 +72,7 @@ git clone https://github.com/itsjibel/Body-Fat-Estimation-Using-Pictures
 cd Body-Fat-Estimation-Using-Pictures
 mkdir input
 pip install -r requirements.txt
+chmod +x run.sh
 ```
 
 Place your input images in the `input` folder.
@@ -81,6 +82,8 @@ Place your input images in the `input` folder.
 To estimate body fat, run the following command:
 
 ```bash
-python estimate-body-fat.py
+python estimate-body-fat.py height sex
+# The height should be in cm and the sex should be 'male' or 'female'.
+# For example:
+python estimate-body-fat.py 190 male
 ```
-

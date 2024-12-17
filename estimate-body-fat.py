@@ -5,10 +5,15 @@ from Parametric_Body_Fat_Estimation.src import parametric_body_fat_estimation as
 import math
 import cv2
 import mediapipe as mp
+import argparse
 print('Done!')
 
-HEIGHT = 190
-SEX = 'male' # male or female
+parser = argparse.ArgumentParser()
+parser.add_argument('--height', type=int)
+parser.add_argument('--sex', type=str)
+args = parser.parse_args()
+HEIGHT = args.height
+SEX = args.sex
 
 print("Calculating the pixel size in cm (frontal  picture)...", flush=True, end=' ')
 frontal_image_pixel_size = PixelSizeEstimaion.calculateFrontalImagePixelSize(HEIGHT)
