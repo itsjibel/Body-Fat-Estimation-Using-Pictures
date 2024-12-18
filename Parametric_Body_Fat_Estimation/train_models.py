@@ -2,13 +2,10 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.callbacks import ModelCheckpoint
-import matplotlib.pyplot as plt
 import joblib
 
 # Load the dataset
@@ -16,6 +13,9 @@ file_path = 'Parametric_Body_Fat_Estimation/dataset/BodyFat - Extended.csv'
 data = pd.read_csv(file_path)
 
 data = data[data['Sex'] == 'F']
+
+# Shuffle the dataset
+data = data.sample(frac=1, random_state=42)
 
 # Separate features and target variable
 X = data[['Height', 'Neck', 'Abdomen']]
@@ -68,6 +68,9 @@ data = pd.read_csv(file_path)
 
 data = data[data['Sex'] == 'M']
 
+# Shuffle the dataset
+data = data.sample(frac=1, random_state=42)
+
 # Separate features and target variable
 X = data[['Height', 'Neck', 'Abdomen']]
 y = data["BodyFat"]
@@ -103,6 +106,7 @@ model = Sequential([
 model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
 
 print("Training men model...", end=' ', flush=True)
+
 # Train the model
 history = model.fit(
     X_scaled, y,
