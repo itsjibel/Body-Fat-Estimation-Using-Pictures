@@ -67,11 +67,14 @@ The model achieves the following levels of accuracy:
 
 To set up the project, follow these steps:
 
+Download [this file](https://www.dropbox.com/s/6ttxi3vb6e7kx4t/cdcl_pascal_model.zip?dl=0), extract it and put and put the weight into Body Part Segmentation/weights folder.
+
 ```bash
 git clone https://github.com/itsjibel/Body-Fat-Estimation-Using-Pictures
 cd Body-Fat-Estimation-Using-Pictures
 mkdir input
 pip install -r requirements.txt
+python Parametric_Body_Fat_Estimation/train_models.py
 chmod +x run.sh
 ```
 
