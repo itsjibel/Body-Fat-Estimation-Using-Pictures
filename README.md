@@ -78,7 +78,7 @@ python Parametric_Body_Fat_Estimation/train_models.py
 chmod +x run.sh
 ```
 
-Place your input images in the `input` folder.
+Place your input images in the `input` folder. (**Names should be "Front.jpg" and "Left.jpg"**)
 
 ### Running the Script
 

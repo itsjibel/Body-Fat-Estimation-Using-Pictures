@@ -14,8 +14,7 @@ def calculateFrontalImagePixelSize(personHeightInCm):
 
     head_y = landmarks[mp_pose.PoseLandmark.RIGHT_WRIST].y * image_height
     foot_y = landmarks[mp_pose.PoseLandmark.LEFT_HEEL].y * image_height
-    pixel_size = abs(head_y - foot_y) / personHeightInCm
-    pixel_size = 1 / pixel_size
+    pixel_size = personHeightInCm / abs(head_y - foot_y)
 
     left_knee_y = landmarks[mp_pose.PoseLandmark.LEFT_KNEE].y * image_height
     left_ankle_y = landmarks[mp_pose.PoseLandmark.LEFT_ANKLE].y * image_height
@@ -40,7 +39,6 @@ def calculateLeftImagePixelSize(personHeightInCm):
     left_shank_length_in_pixel = math.sqrt((left_knee_y - left_ankle_y) * (left_knee_y - left_ankle_y) + (left_knee_x - left_ankle_x) * (left_knee_x - left_ankle_x))
     _, left_shank_length_in_cm = calculateFrontalImagePixelSize(personHeightInCm)
 
-    pixel_size = left_shank_length_in_pixel / left_shank_length_in_cm
-    pixel_size = 1 / pixel_size
+    pixel_size = left_shank_length_in_cm / left_shank_length_in_pixel
 
     return pixel_size
